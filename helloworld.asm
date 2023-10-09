@@ -46,12 +46,13 @@ segment .data
     main_style		equ WS_VISIBLE|WS_TILEDWINDOW|WS_POPUP|WS_BORDER
     IDI_APPLICATION equ 32512
     IDC_ARROW       equ 32512
-    WINDW_NAME: 	db "All Assembly DirectX Sample", 0
-    CLASS_NAME:     db "My Class", 0
-    CLASS_ATOM:     dq 0
-    ppIFactory:     dq 0
-    ppWindow:       dq 0
-    message:        db "%p", 0xa, 0
+    WINDW_NAME: 	    db "All Assembly DirectX Sample", 0
+    CLASS_NAME:         db "My Class", 0
+    CLASS_ATOM:         dq 0
+    ppIFactory:         dq 0
+    pphwndRenderTarget: dq 0
+    ppWindow:           dq 0
+    message:            db "%p", 0xa, 0
     wc:
         istruc WNDCLASS
             at .style,           dd classStyle
@@ -140,29 +141,32 @@ section .text
 
         mov     rax, [ppWindow]
         mov     [hwnd_render_target_properties + d2d1_hwnd_render_target_properties.hwnd], rax
-
         xor     rax, rax
         mov     eax, [client_rect + rect.right]
         mov     [hwnd_render_target_properties + d2d1_hwnd_render_target_properties.width], eax
-
         mov     eax, [client_rect + rect.bottom]
         mov     [hwnd_render_target_properties + d2d1_hwnd_render_target_properties.height], eax
 
         mov     rcx, [ppIFactory]
+        mov     rbx, [rcx]
         lea     rdx, [render_target_properties + d2d1_render_target_properties.dpiX]
         lea     r8, [render_target_properties + d2d1_render_target_properties.dpiY]
-        call    qword [rcx + 0x20]
+        call    qword [rbx + 0x20]
+
+        mov     rcx, [ppIFactory]
+        mov     rbx, [rcx]
+        mov     rdx, render_target_properties
+        mov     r8, hwnd_render_target_properties
+        mov     r9, pphwndRenderTarget
+        call    qword [rbx + 0x70]
+
+        ;mov     rcx, [pphwndRenderTarget]
+        ;mov     rbx, [rcx]
+        ;mov     rdx, 
 
         mov     rcx, message
-        mov     rdx, ppIFactory
+        mov     rdx, [pphwndRenderTarget]
         call    printf
-        mov     rcx, message
-        mov     edx, [render_target_properties + d2d1_render_target_properties.dpiY]
-        call    printf
-        mov     rcx, message
-        mov     edx, [hwnd_render_target_properties + d2d1_hwnd_render_target_properties.height]
-        call    printf
-        ;mov     rdx, render
         ;myloop:
         ;jmp myloop
         add     rsp, 104             ; clear stack
