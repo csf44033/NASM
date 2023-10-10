@@ -6,6 +6,10 @@ extern  printf, GetModuleHandleA, LoadIconA, LoadCursorA, RegisterClassA, DefWin
 segment .data
     %include    "window_constants.asm"
     %include    "riid.asm"
+    struc d2d_point_2f
+        .x: resd 1
+        .y: resd 1
+    endstruc
     struc d3dcolorvalue
         .r: resd 1
         .g: resd 1
@@ -55,7 +59,9 @@ segment .data
     WINDW_NAME: 	    db "All Assembly DirectX Sample", 0
     CLASS_NAME:         db "My Class", 0
     CLASS_ATOM:         dq 0
-    float_one:          dd 1
+    float_one:          dq 1.0
+    ppTag1:             dq 0
+    ppTag2:             dq 0
     ppIFactory:         dq 0
     pphwndRenderTarget: dq 0
     ppsolidColorBrush:  dq 0
@@ -108,13 +114,22 @@ segment .data
             at .right,  dd 50.0
             at .bottom, dd 50.0
         iend
+    p0:
+        istruc d2d_point_2f
+            at .x,  dd 0.0
+            at .y,  dd 0.0
+        iend
+    p1:
+        istruc d2d_point_2f
+            at .x,  dd 50.0
+            at .y,  dd 50.0
+        iend
 ; main code
 section .text
     main:
         sub     rsp, 104             ; home space
-        ;---------------------------------------
-        ; Register class
-        ;---------------------------------------
+
+; Register class
         xor     rcx, rcx                        ; [in, optional]    lpModuleName
         call    GetModuleHandleA                ; call
         mov     [wc + WNDCLASS.hInstance], rax  ;
@@ -129,9 +144,7 @@ section .text
         mov     rcx, wc                         ; [in]              lpWndClass
         call    RegisterClassA                  ; call
         mov     [CLASS_ATOM], rax               ;
-        ;---------------------------------------
-        ; Create window
-        ;-----------------------------------------------
+; Create window
         xor     rcx, rcx                                ; [in]              dwExStyle
         mov     rdx, CLASS_NAME                         ; [in, optional]    lpClassName
         mov     r8, WINDW_NAME                          ; [in, optional]    lpWindowName
@@ -185,29 +198,18 @@ section .text
         mov     rcx, [pphwndRenderTarget]
         mov     rbx, [rcx]
         mov     rdx, color_black
-        mov     r8, ppsolidColorBrush
-        call    qword [rbx + 0x40]
-;pRT->BeginDraw();
-        mov     rcx, [pphwndRenderTarget]
-        mov     rbx, [rcx]
-        call    qword [rbx + 0x180]
-;pRT->DrawRectangle(
-        mov         rcx, [pphwndRenderTarget]
-        mov         rbx, [rcx]
-        mov         rdx, draw_rect
-        mov         r8, [ppsolidColorBrush]
-        cvtsi2sd    xmm3, [float_one]
-        mov         qword [rsp + 0x20], 0
-        call        qword [rbx + 0x80]
-;HRESULT hr = pRT->EndDraw();  
+        call    qword [rbx + 0x178]
 
         mov     rcx, message
-        mov     edx, [client_rect + rect.right]
+        mov     rdx, rax
         call    printf
         mov     rcx, message
         mov     rdx, [pphwndRenderTarget]
         call    printf
-        ;myloop:
-        ;jmp myloop
+        mov     rcx, message
+        mov     rdx, [ppTag2]
+        call    printf
+        myloop:
+        jmp myloop
         add     rsp, 104             ; clear stack
         ret
