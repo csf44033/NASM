@@ -1,6 +1,6 @@
 default rel
 global  main
-extern  printf, GetModuleHandleA, LoadIconA, LoadCursorA, RegisterClassA, DefWindowProcA, GetLastError, CreateWindowExA, ShowWindow, D2D1CreateFactory, GetClientRect
+extern  printf, GetModuleHandleA, LoadIconA, LoadCursorA, RegisterClassA, DefWindowProcA, GetLastError, CreateWindowExA, ShowWindow, D2D1CreateFactory, GetClientRect, ValidateRect, PostQuitMessage
 
 ; define data
 segment .data
@@ -59,7 +59,7 @@ segment .data
     WINDW_NAME: 	    db "All Assembly DirectX Sample", 0
     CLASS_NAME:         db "My Class", 0
     CLASS_ATOM:         dq 0
-    float_one:          dq 1.0
+    float_one:          dd 1.0
     ppTag1:             dq 0
     ppTag2:             dq 0
     ppIFactory:         dq 0
@@ -70,7 +70,7 @@ segment .data
     wc:
         istruc WNDCLASS
             at .style,           dd classStyle
-            at .lpfnWndProc,     dq DefWindowProcA
+            at .lpfnWndProc,     dq wndproc
             at .cbClsExtra,      dd 0
             at .cbWndExtra,      dd 0
             at .hInstance,       dq 0
@@ -94,7 +94,7 @@ segment .data
         istruc d2d1_render_target_properties
             at ._type,      dd 0
             at .format,     dd 0
-            at .alphaMode,  dd 0
+            at .alphaMode,  dd 3
             at .dpiX,       dd 0.0
             at .dpiY,       dd 0.0
             at .usage,      dd 0
@@ -102,7 +102,7 @@ segment .data
         iend
     color_black:
         istruc d3dcolorvalue
-            at .r, dd 0.0
+            at .r, dd 1.0
             at .g, dd 0.0
             at .b, dd 0.0
             at .a, dd 1.0
@@ -187,29 +187,99 @@ section .text
         lea     rdx, [render_target_properties + d2d1_render_target_properties.dpiX]
         lea     r8, [render_target_properties + d2d1_render_target_properties.dpiY]
         call    qword [rbx + 0x20]
-
+;create render target
         mov     rcx, [ppIFactory]
         mov     rbx, [rcx]
         mov     rdx, render_target_properties
         mov     r8, hwnd_render_target_properties
         mov     r9, pphwndRenderTarget
         call    qword [rbx + 0x70]
-
+; create solid color brush
         mov     rcx, [pphwndRenderTarget]
         mov     rbx, [rcx]
         mov     rdx, color_black
-        call    qword [rbx + 0x178]
-
+        xor     r8, r8
+        mov     r9, ppsolidColorBrush
+        call    qword [rbx+0x40]
+; begin draw
+        mov     rcx, [pphwndRenderTarget]
+        mov     rbx, [rcx]
+        call    qword [rbx + 0x180]
+; draw line
+        mov     rcx, [pphwndRenderTarget]
+        mov     rbx, [rcx]
+        mov     rdx, p0
+        mov     r8, p1
+        mov     r9, [ppsolidColorBrush]
+        xor     rax, rax
+        mov     eax, [float_one]
+        mov     qword [rsp + 0x20], 0
+        mov     qword [rsp + 0x28], 0
+        call    qword [rbx + 0x78]
+; end draw
+        mov     rcx, [pphwndRenderTarget]
+        mov     rbx, [rcx]
+        mov     rdx, ppTag1
+        mov     r8, ppTag2
+        call    qword [rbx + 0x188]
         mov     rcx, message
         mov     rdx, rax
         call    printf
         mov     rcx, message
-        mov     rdx, [pphwndRenderTarget]
+        mov     rdx, [ppTag1]
         call    printf
         mov     rcx, message
         mov     rdx, [ppTag2]
+        call    printf
+; clear canvas
+        xor     rax, rax
+        mov     rcx, [pphwndRenderTarget]
+        mov     rbx, [rcx]
+        mov     rdx, color_black
+        call    qword [rbx+0x178]
+        mov     rcx, message
+        mov     rdx, rax
         call    printf
         myloop:
         jmp myloop
         add     rsp, 104             ; clear stack
         ret
+wndproc:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64
+    mov     qword [rsp+0x20], rcx
+    mov     qword [rsp+0x28], rdx
+    mov     qword [rsp+0x30], r8
+    mov     qword [rsp+0x38], r9
+    cmp     rdx, wm_close
+    je      Lclose
+    cmp     rdx, wm_paint
+    je      Lpaint
+    cmp     rdx, wm_erasebkgnd
+    je      Lerasebkgnd
+    jmp     Ldefault
+Lclose:
+    xor     rcx, rcx
+    call    PostQuitMessage
+    jmp     Lfinish
+Lpaint:
+    mov     rcx, qword [rsp+0x20]
+    xor     rdx, rdx
+    call    ValidateRect
+    xor     rax, rax
+    jmp     Lfinish
+Lerasebkgnd:
+    mov     rax, 1
+    jmp     Lfinish
+Ldefault:
+    mov     rcx, qword [rsp+0x20]
+    mov     rdx, qword [rsp+0x28]
+    mov     r8, qword [rsp+0x30]
+    mov     r9, qword [rsp+0x38]
+    call    DefWindowProcA
+    jmp     Lfinish
+Lfinish:
+    mov     rsp, rbp
+    pop     rbp
+    ret
