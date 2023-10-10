@@ -6,6 +6,12 @@ extern  printf, GetModuleHandleA, LoadIconA, LoadCursorA, RegisterClassA, DefWin
 segment .data
     %include    "window_constants.asm"
     %include    "riid.asm"
+    struc d3dcolorvalue
+        .r: resd 1
+        .g: resd 1
+        .b: resd 1
+        .a: resd 1
+    endstruc
     struc d2d1_hwnd_render_target_properties
         .hwnd:              resq 1
         .width:             resd 1
@@ -49,8 +55,10 @@ segment .data
     WINDW_NAME: 	    db "All Assembly DirectX Sample", 0
     CLASS_NAME:         db "My Class", 0
     CLASS_ATOM:         dq 0
+    float_one:          dd 1
     ppIFactory:         dq 0
     pphwndRenderTarget: dq 0
+    ppsolidColorBrush:  dq 0
     ppWindow:           dq 0
     message:            db "%p", 0xa, 0
     wc:
@@ -85,6 +93,20 @@ segment .data
             at .dpiY,       dd 0.0
             at .usage,      dd 0
             at .minLevel,   dd 0
+        iend
+    color_black:
+        istruc d3dcolorvalue
+            at .r, dd 0.0
+            at .g, dd 0.0
+            at .b, dd 0.0
+            at .a, dd 1.0
+        iend
+    draw_rect:
+        istruc rect
+            at .left,   dd 0.0
+            at .top,    dd 0.0
+            at .right,  dd 50.0
+            at .bottom, dd 50.0
         iend
 ; main code
 section .text
@@ -160,10 +182,28 @@ section .text
         mov     r9, pphwndRenderTarget
         call    qword [rbx + 0x70]
 
-        ;mov     rcx, [pphwndRenderTarget]
-        ;mov     rbx, [rcx]
-        ;mov     rdx, 
+        mov     rcx, [pphwndRenderTarget]
+        mov     rbx, [rcx]
+        mov     rdx, color_black
+        mov     r8, ppsolidColorBrush
+        call    qword [rbx + 0x40]
+;pRT->BeginDraw();
+        mov     rcx, [pphwndRenderTarget]
+        mov     rbx, [rcx]
+        call    qword [rbx + 0x180]
+;pRT->DrawRectangle(
+        mov         rcx, [pphwndRenderTarget]
+        mov         rbx, [rcx]
+        mov         rdx, draw_rect
+        mov         r8, [ppsolidColorBrush]
+        cvtsi2sd    xmm3, [float_one]
+        mov         qword [rsp + 0x20], 0
+        call        qword [rbx + 0x80]
+;HRESULT hr = pRT->EndDraw();  
 
+        mov     rcx, message
+        mov     edx, [client_rect + rect.right]
+        call    printf
         mov     rcx, message
         mov     rdx, [pphwndRenderTarget]
         call    printf
