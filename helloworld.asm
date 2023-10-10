@@ -52,6 +52,12 @@ segment .data
         .right:     resd 1
         .bottom:    resd 1
     endstruc
+    struc oRect
+        .left:      resq 1
+        .top:       resq 1
+        .right:     resq 1
+        .bottom:    resq 1
+    endstruc
     classStyle		equ cs_vredraw|cs_hredraw|cs_dblclks|cs_owndc|cs_parentdc
     main_style		equ WS_VISIBLE|WS_TILEDWINDOW|WS_POPUP|WS_BORDER
     IDI_APPLICATION equ 32512
@@ -59,7 +65,7 @@ segment .data
     WINDW_NAME: 	    db "All Assembly DirectX Sample", 0
     CLASS_NAME:         db "My Class", 0
     CLASS_ATOM:         dq 0
-    float_one:          dd 1.0
+    float_one:          dq 1.0
     ppTag1:             dq 0
     ppTag2:             dq 0
     ppIFactory:         dq 0
@@ -208,38 +214,27 @@ section .text
 ; draw line
         mov     rcx, [pphwndRenderTarget]
         mov     rbx, [rcx]
-        mov     rdx, p0
-        mov     r8, p1
-        mov     r9, [ppsolidColorBrush]
-        xor     rax, rax
-        mov     eax, [float_one]
+        mov     rdx, draw_rect
+        mov     r8, [ppsolidColorBrush]
+        mov     rax, [float_one]
+        xor     r9, r9
         mov     qword [rsp + 0x20], 0
-        mov     qword [rsp + 0x28], 0
-        call    qword [rbx + 0x78]
+        call    qword [rbx + 0x88]
 ; end draw
         mov     rcx, [pphwndRenderTarget]
         mov     rbx, [rcx]
         mov     rdx, ppTag1
         mov     r8, ppTag2
         call    qword [rbx + 0x188]
-        mov     rcx, message
-        mov     rdx, rax
-        call    printf
-        mov     rcx, message
-        mov     rdx, [ppTag1]
-        call    printf
-        mov     rcx, message
-        mov     rdx, [ppTag2]
-        call    printf
 ; clear canvas
-        xor     rax, rax
-        mov     rcx, [pphwndRenderTarget]
-        mov     rbx, [rcx]
-        mov     rdx, color_black
-        call    qword [rbx+0x178]
-        mov     rcx, message
-        mov     rdx, rax
-        call    printf
+        ;xor     rax, rax
+        ;mov     rcx, [pphwndRenderTarget]
+        ;mov     rbx, [rcx]
+        ;mov     rdx, color_black
+        ;call    qword [rbx+0x178]
+        ;mov     rcx, message
+        ;mov     rdx, rax
+        ;call    printf
         myloop:
         jmp myloop
         add     rsp, 104             ; clear stack
