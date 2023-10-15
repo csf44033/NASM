@@ -25,47 +25,76 @@ render_target_properties:
     istruc d2d1_render_target_properties
     at ._type,      dd 0
     at .format,     dd 0
-    at .alphaMode,  dd 3
+    at .alphaMode,  dd 0
     at .dpiX,       dd 0.0
     at .dpiY,       dd 0.0
     at .usage,      dd 0
     at .minLevel,   dd 0
     iend
-color_black:
+color_red:
     istruc d3dcolorvalue
     at .r, dd 1.0
     at .g, dd 0.0
     at .b, dd 0.0
     at .a, dd 1.0
     iend
-draw_rect:
+color_white:
+    istruc d3dcolorvalue
+    at  .r, dd 1.0
+    at  .g, dd 1.0
+    at  .b, dd 1.0
+    at  .a, dd 1.0
+    iend
+color_nothing:
+    istruc d3dcolorvalue
+    at .r, dd 0.0
+    at .g, dd 0.0
+    at .b, dd 0.0
+    at .a, dd 0.0
+    iend
+pad:
     istruc rect
-    at .left,   dd 0.0
-    at .top,    dd 0.0
-    at .right,  dd 50.0
-    at .bottom, dd 50.0
+    at .left,   dd -5.0
+    at .top,    dd -25.0
+    at .right,  dd 5.0
+    at .bottom, dd 25.0
     iend
-draw_rect2:
-    istruc rect
-    at .left,   dd 100.0
-    at .top,    dd 100.0
-    at .right,  dd 125.0
-    at .bottom, dd 150.0
-    iend
-p0:
-    istruc d2d_point_2f
-    at .x,  dd 0.0
-    at .y,  dd 0.0
-    iend
-p1:
-    istruc d2d_point_2f
-    at .x,  dd 50.0
-    at .y,  dd 50.0
-    iend
-ellipse:
+ball:
     istruc d2d1_ellipse
-    at .x,          dd 200.0
-    at .y,          dd 100.0
-    at .radiusX,    dd 25.0
-    at .radiusY,    dd 25.0
+    at .x,          dd 0.0
+    at .y,          dd 0.0
+    at .radiusX,    dd 5.0
+    at .radiusY,    dd 5.0
+    iend
+velocity:
+    istruc d2d_point_2f
+    at .x,  dd 1
+    at .y,  dd 1
+    iend
+IdentityMatrix:
+    istruc matrix3x2f
+    at ._11,    dd 1.0
+    at ._12,    dd 0.0
+    at ._21,    dd 0.0
+    at ._22,    dd 1.0
+    at ._31,    dd 0.0
+    at ._32,    dd 0.0
+    iend
+Matrix0:
+    istruc matrix3x2f
+    at ._11,    dd 1.0
+    at ._12,    dd 0.0
+    at ._21,    dd 0.0
+    at ._22,    dd 1.0
+    at ._31,    dd 20.0
+    at ._32,    dd 100.0
+    iend
+Matrix1:
+    istruc matrix3x2f
+    at ._11,    dd 1.0
+    at ._12,    dd 0.0
+    at ._21,    dd 0.0
+    at ._22,    dd 1.0
+    at ._31,    dd 200.0
+    at ._32,    dd 100.0
     iend

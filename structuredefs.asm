@@ -1,3 +1,11 @@
+struc matrix3x2f
+    ._11: resd 1
+    ._12: resd 1
+    ._21: resd 1
+    ._22: resd 1
+    ._31: resd 1
+    ._32: resd 1
+    endstruc
 struc d2d1_ellipse
     .x: resd 1
     .y: resd 1
