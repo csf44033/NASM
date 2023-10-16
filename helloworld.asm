@@ -1,10 +1,17 @@
 default rel
 global  main
-extern  printf, GetModuleHandleA, LoadIconA, LoadCursorA, RegisterClassA, DefWindowProcA, GetLastError, CreateWindowExA, ShowWindow, D2D1CreateFactory, GetClientRect, ValidateRect, PostQuitMessage, PeekMessageA, TranslateMessage, DispatchMessageA
+
+extern  printf, GetModuleHandleA, LoadIconA, LoadCursorA
+extern  RegisterClassA, DefWindowProcA, GetLastError, CreateWindowExA
+extern  ShowWindow, D2D1CreateFactory, GetClientRect, ValidateRect
+extern  PostQuitMessage, PeekMessageA, TranslateMessage, DispatchMessageA
+extern  DWriteCreateFactory, GetUserDefaultLocaleName
+
 %define PM_REMOVE 1h
 ; define data
 segment .bss
     MessageBuffer resb 28
+    otherName     resb 7
 segment .data
     %include    "window_constants.asm"
     %include    "riid.asm"
@@ -14,6 +21,8 @@ segment .data
     main_style		equ WS_VISIBLE|WS_TILEDWINDOW|WS_POPUP|WS_BORDER
     IDI_APPLICATION equ 32512
     IDC_ARROW       equ 32512
+    localeName:         times 84 dw 0
+    fontFamilyName:     times 84 dw 0
     keybuf:             times 32 db 0
     half_height:        dd 0
     half_width:         dd 0
@@ -33,7 +42,56 @@ segment .data
     ppwhiteBrush:       dq 0
     ppWindow:           dq 0
     message:            db "%p", 0xa, 0
-
+    message2:           db "%ls",0xa, 0
+    score:              db 0
+    mscore:             db 'S', 0, 'c', 0, 'o', 0, 'r', 0, 'e', 0, 0
+;dwrite values
+    dwrite_factory_type_shared:     dq 0
+    dwrite_factory_type_isolated:   dq 1
+    DWRITE_FONT_WEIGHT_THIN:        dq 100
+    DWRITE_FONT_WEIGHT_EXTRA_LIGHT: dq 200
+    DWRITE_FONT_WEIGHT_ULTRA_LIGHT: dq 200
+    DWRITE_FONT_WEIGHT_LIGHT:       dq 300
+    DWRITE_FONT_WEIGHT_SEMI_LIGHT:  dq 350
+    DWRITE_FONT_WEIGHT_NORMAL:      dq 400
+    DWRITE_FONT_WEIGHT_REGULAR:     dq 400
+    DWRITE_FONT_WEIGHT_MEDIUM:      dq 500
+    DWRITE_FONT_WEIGHT_DEMI_BOLD:   dq 600
+    DWRITE_FONT_WEIGHT_SEMI_BOLD:   dq 600
+    DWRITE_FONT_WEIGHT_BOLD:        dq 700
+    DWRITE_FONT_WEIGHT_EXTRA_BOLD:  dq 800
+    DWRITE_FONT_WEIGHT_ULTRA_BOLD:  dq 800
+    DWRITE_FONT_WEIGHT_BLACK:       dq 900
+    DWRITE_FONT_WEIGHT_HEAVY:       dq 900
+    DWRITE_FONT_WEIGHT_EXTRA_BLACK: dq 950
+    DWRITE_FONT_WEIGHT_ULTRA_BLACK: dq 950
+    DWRITE_FONT_STYLE_NORMAL:       dq 0
+    DWRITE_FONT_STYLE_OBLIQUE:      dq 1
+    DWRITE_FONT_STYLE_ITALIC:       dq 2
+    DWRITE_FONT_STRETCH_UNDEFINED:  dq 0
+    DWRITE_FONT_STRETCH_ULTRA_CONDENSED: dq 1
+    DWRITE_FONT_STRETCH_EXTRA_CONDENSED: dq 2
+    DWRITE_FONT_STRETCH_CONDENSED:  dq 3
+    DWRITE_FONT_STRETCH_SEMI_CONDENSED: dq 4
+    DWRITE_FONT_STRETCH_NORMAL:     dq 5
+    DWRITE_FONT_STRETCH_MEDIUM:     dq 5
+    DWRITE_FONT_STRETCH_SEMI_EXPANDED: dq 6
+    DWRITE_FONT_STRETCH_EXPANDED:   dq 7
+    DWRITE_FONT_STRETCH_EXTRA_EXPANDED: dq 8
+    DWRITE_FONT_STRETCH_ULTRA_EXPANDED: dq 9
+    DWRITE_TEXT_ALIGNMENT_LEADING:  dq 0
+    DWRITE_TEXT_ALIGNMENT_TRAILING: dq 1
+    DWRITE_TEXT_ALIGNMENT_CENTER:   dq 2
+    DWRITE_TEXT_ALIGNMENT_JUSTIFIED:dq 3
+    DWRITE_PARAGRAPH_ALIGNMENT_NEAR:    dq 0
+    DWRITE_PARAGRAPH_ALIGNMENT_FAR:     dq 1
+    DWRITE_PARAGRAPH_ALIGNMENT_CENTER:  dq 2
+    ppWriteFactory:                 dq 0
+    ppFontCollection:               dq 0
+    ppWriteTextFormat:              dq 0
+    ppFontFamily:                   dq 0
+    ppFamilyNames:                  dq 0
+    length:                         dd 0
 ; main code
 section .text
 main:
@@ -88,13 +146,13 @@ main:
     mov     rax, [ppWindow]
     mov     [hwnd_render_target_properties + d2d1_hwnd_render_target_properties.hwnd], rax
     mov     eax, [client_rect + rect.right]
-;get half width in 32 bit float
+; get half width in 32 bit float
     mov     ebx, eax
     shr     ebx, 1
     mov     [half_width], ebx
     mov     [hwnd_render_target_properties + d2d1_hwnd_render_target_properties.width], eax
     mov     eax, [client_rect + rect.bottom]
-;get half height in 32 bit float
+; get half height in 32 bit float
     mov     ebx, eax
     shr     ebx, 1
     mov     [half_height], ebx
@@ -105,14 +163,13 @@ main:
     lea     rdx, [render_target_properties + d2d1_render_target_properties.dpiX]
     lea     r8, [render_target_properties + d2d1_render_target_properties.dpiY]
     call    qword [rbx + 0x20]
-;create render target
+; create render target
     mov     rcx, [ppIFactory]
     mov     rbx, [rcx]
     mov     rdx, render_target_properties
     mov     r8, hwnd_render_target_properties
     mov     r9, pphwndRenderTarget
     call    qword [rbx + 0x70]
-
 ; create red brush
     mov     rcx, [pphwndRenderTarget]
     mov     rbx, [rcx]
@@ -127,10 +184,90 @@ main:
     xor     r8, r8
     mov     r9, ppwhiteBrush
     call    qword [rbx+0x40]
-
-    mov     rcx, message
-    mov     edx, [half_width]
+; create IDWriteFactory
+    mov     rcx, [dwrite_factory_type_shared]
+    mov     rdx, IID_IDWriteFactory
+    mov     r8, ppWriteFactory
+    call    DWriteCreateFactory
+; getsystemfontcollection
+    mov     rcx, [ppWriteFactory]
+    mov     rbx, [rcx]
+    mov     rdx, ppFontCollection
+    xor     r8, r8
+    call    [rbx + 0x18]
+; get font family
+    mov     rcx, [ppFontCollection]
+    mov     rbx, [rcx]
+    mov     rdx, 0
+    mov     r8, ppFontFamily
+    call    [rbx + 0x20]
+; get font family name
+    mov     rcx, [ppFontFamily]
+    mov     rbx, [rcx]
+    mov     rdx, ppFamilyNames
+    call    [rbx + 0x30]
+; get user default locale name
+    mov     rcx, localeName
+    mov     rdx, 85
+    call    GetUserDefaultLocaleName
+    mov     rcx, message2
+    mov     rdx, localeName
     call    printf
+; find locale name
+    mov     rcx, [ppFamilyNames]
+    mov     rbx, [rcx]
+    mov     rdx, localeName
+    mov     r8, ppTag1
+    mov     r9, ppTag2
+    call    [rbx + 0x20]
+; get string length
+    mov     rcx, [ppFamilyNames]
+    mov     rbx, [rcx]
+    mov     rdx, [ppTag1]
+    mov     r8, length
+    call    [rbx + 0x38]
+    mov     rax, [length]
+    add     rax, 1
+; get string
+    mov     rcx, [ppFamilyNames]
+    mov     rbx, [rcx]
+    mov     rdx, [ppTag1]
+    mov     r8, fontFamilyName
+    mov     rax, [length]
+    add     rax, 1
+    mov     r9, rax
+    call    [rbx + 0x40]
+    mov     rcx, message2
+    mov     rdx, fontFamilyName
+    call    printf
+; create text format
+    mov         rcx, [ppWriteFactory]
+    mov         rbx, [rcx]
+    mov         rdx, fontFamilyName                 ; fontFamilyName
+    xor         r8, r8                              ; fontCollection
+    mov         r9, [DWRITE_FONT_WEIGHT_REGULAR]       ; fontWeight;
+    mov         rax, [DWRITE_FONT_STYLE_NORMAL]
+    mov         qword [rsp + 0x20], rax             ; fontStyle
+    mov         rax, [DWRITE_FONT_STRETCH_NORMAL]
+    mov         qword [rsp + 0x28], rax             ; fontStretch
+    mov         rax, 72
+    cvtsi2ss    xmm0, rax
+    movss       [rsp + 0x30], xmm0                  ; fontSize
+    mov         rax, localeName
+    mov         qword [rsp + 0x38], rax             ; localeName
+    mov         rax, ppWriteTextFormat
+    mov         qword [rsp + 0x40], rax             ; textFormat
+    call        qword [rbx + 0x78]
+; set text alignment
+    mov     rcx, [ppWriteTextFormat]
+    mov     rbx, [rcx]
+    mov     rdx, [DWRITE_TEXT_ALIGNMENT_CENTER]
+    call    qword [rbx + 0x18]
+; set paragraph alignment
+    mov     rcx, [ppWriteTextFormat]
+    mov     rbx, [rcx]
+    mov     rdx, [DWRITE_PARAGRAPH_ALIGNMENT_CENTER]
+    call    qword [rbx + 0x20]
 myloop:
     mov     rcx, MessageBuffer
     xor     rdx, rdx
@@ -241,6 +378,23 @@ c4:
     mov     rdx, ball
     mov     r8, [ppredBrush]
     call    qword [rbx + 0xa8]
+; draw text
+    mov     rcx, [pphwndRenderTarget]
+    mov     rbx, [rcx]
+    mov     rdx, IdentityMatrix
+    call    qword [rbx + 0xf0]
+    mov     rcx, [pphwndRenderTarget]
+    mov     rbx, [rcx]
+    mov     rdx, mscore
+    mov     r8, 5
+    mov     r9, [ppWriteTextFormat]
+    mov     rax, TextBox0
+    mov     qword [rsp + 0x20], rax; layoutRect
+    mov     rax, [ppwhiteBrush]
+    mov     qword [rsp + 0x28], rax
+    mov     qword [rsp + 0x30], 0; options
+    mov     qword [rsp + 0x38], 0; measuringMode
+    call    qword [rbx + 0xd8]
 ; end draw
     mov     rcx, [pphwndRenderTarget]
     mov     rbx, [rcx]

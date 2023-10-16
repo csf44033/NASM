@@ -98,3 +98,10 @@ Matrix1:
     at ._31,    dd 200.0
     at ._32,    dd 100.0
     iend
+TextBox0:
+    istruc rect
+    at .left,   dd 0.0
+    at .top,    dd 0.0
+    at .right,  dd 300.0
+    at .bottom, dd 72.0
+    iend
