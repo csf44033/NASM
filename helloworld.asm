@@ -5,7 +5,7 @@ extern  printf, GetModuleHandleA, LoadIconA, LoadCursorA
 extern  RegisterClassA, DefWindowProcA, GetLastError, CreateWindowExA
 extern  ShowWindow, D2D1CreateFactory, GetClientRect, ValidateRect
 extern  PostQuitMessage, PeekMessageA, TranslateMessage, DispatchMessageA
-extern  DWriteCreateFactory, GetUserDefaultLocaleName
+extern  DWriteCreateFactory, GetUserDefaultLocaleName, __mingw_swprintf
 
 %define PM_REMOVE 1h
 ; define data
@@ -23,6 +23,7 @@ segment .data
     IDC_ARROW       equ 32512
     localeName:         times 84 dw 0
     fontFamilyName:     times 84 dw 0
+    scorebuf:           times 10 dw 0
     keybuf:             times 32 db 0
     half_height:        dd 0
     half_width:         dd 0
@@ -43,8 +44,9 @@ segment .data
     ppWindow:           dq 0
     message:            db "%p", 0xa, 0
     message2:           db "%ls",0xa, 0
-    score:              db 0
-    mscore:             db 'S', 0, 'c', 0, 'o', 0, 'r', 0, 'e', 0, 0
+    format0:            db "%",0,"s",0," ",0,"%",0,"d",0,0,0
+    score:              dd 0
+    mscore:             db "Score",0
 ;dwrite values
     dwrite_factory_type_shared:     dq 0
     dwrite_factory_type_isolated:   dq 1
@@ -250,7 +252,7 @@ main:
     mov         qword [rsp + 0x20], rax             ; fontStyle
     mov         rax, [DWRITE_FONT_STRETCH_NORMAL]
     mov         qword [rsp + 0x28], rax             ; fontStretch
-    mov         rax, 72
+    mov         rax, 20
     cvtsi2ss    xmm0, rax
     movss       [rsp + 0x30], xmm0                  ; fontSize
     mov         rax, localeName
@@ -307,28 +309,49 @@ c1:
     cvtsi2ss    xmm0, rax
     movss       [Matrix0 + matrix3x2f._32], xmm0
 c2:
-; move ball
-    mov         r8d, [half_width]
+; move ball x
     cvtss2si    ecx, [Matrix1 + matrix3x2f._31]
     add         ecx, [velocity + d2d_point_2f.x]
-    xor         rax, rax
-    mov         eax, ecx
-    sub         eax, r8d
-    mov         edx, eax
-    neg         edx
-    cmovs       edx, eax
-    cmp         edx, r8d
-    jb          c3
-    mov         eax, [velocity + d2d_point_2f.x]
-    mul         r8d
-    add         eax, r8d
-    mov         ecx, eax
-    neg         dword[velocity + d2d_point_2f.x]
+    cmp         ecx, [hwnd_render_target_properties + d2d1_hwnd_render_target_properties.width]
+    jb      c3
+; past right side of screen
+    mov     ecx, [hwnd_render_target_properties + d2d1_hwnd_render_target_properties.width]
+    neg     dword [velocity + d2d_point_2f.x]
+    add     dword [score], 1
 c3:
+    mov         rax, rcx
+    cvtss2si    rbx, [Matrix0 + matrix3x2f._31]
+    sub         rax, rbx
+    cvtss2si    rbx, [pad + rect.right]
+    sub         rax, rbx
+    cmp         rax, 0
+    ja          c4
+; distance from pad is less than zero
+    cvtss2si    eax, [Matrix0 + matrix3x2f._32]
+    cvtss2si    ebx, [Matrix1 + matrix3x2f._32]
+    sub         ebx, eax
+    mov         edx, ebx
+    neg         edx
+    cmovs       edx, ebx
+    cvtss2si    eax, [pad + rect.bottom]
+    cmp         eax, edx
+    jb          c4
+; ball between pad
+    cvtss2si    rbx, [pad + rect.right]
+    cvtss2si    rcx, [Matrix0 + matrix3x2f._31]
+    add         rcx, rbx
+    neg         dword [velocity + d2d_point_2f.x]
+    add         dword [score], 1
+c4:
+    cmp     ecx, 0
+    ja      c5
+    mov     dword [score], 0
+    mov     rcx, 200
+c5:
 ; update position
     cvtsi2ss    xmm0, ecx
     movss       [Matrix1 + matrix3x2f._31], xmm0
-
+; mov ball y
     mov         r8d, [half_height]
     cvtss2si    ecx, [Matrix1 + matrix3x2f._32]
     add         ecx, [velocity + d2d_point_2f.y]
@@ -339,13 +362,13 @@ c3:
     neg         edx
     cmovs       edx, eax
     cmp         edx, r8d
-    jb          c4
+    jb          c6
     mov         eax, [velocity + d2d_point_2f.y]
     mul         r8d
     add         eax, r8d
     mov         ecx, eax
     neg         dword[velocity + d2d_point_2f.y]
-c4:
+c6:
 ; update position
     cvtsi2ss    xmm0, ecx
     movss       [Matrix1 + matrix3x2f._32], xmm0
@@ -379,14 +402,19 @@ c4:
     mov     r8, [ppredBrush]
     call    qword [rbx + 0xa8]
 ; draw text
+    mov     rcx, scorebuf
+    mov     rdx, format0
+    mov     r8, mscore
+    mov     r9d, [score]
+    call    __mingw_swprintf
     mov     rcx, [pphwndRenderTarget]
     mov     rbx, [rcx]
     mov     rdx, IdentityMatrix
     call    qword [rbx + 0xf0]
     mov     rcx, [pphwndRenderTarget]
     mov     rbx, [rcx]
-    mov     rdx, mscore
-    mov     r8, 5
+    mov     rdx, scorebuf
+    mov     r8, 10
     mov     r9, [ppWriteTextFormat]
     mov     rax, TextBox0
     mov     qword [rsp + 0x20], rax; layoutRect
