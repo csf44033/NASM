@@ -1,22 +1,26 @@
-extern  printf
-extern  GetModuleHandleA
-extern  LoadIconA
-extern  LoadCursorA
-extern  RegisterClassA
-extern  DefWindowProcA
-extern  GetLastError
-extern  CreateWindowExA
-extern  ShowWindow
-extern  D2D1CreateFactory
-extern  GetClientRect
-extern  ValidateRect
-extern  PostQuitMessage
-extern  PeekMessageA
-extern  TranslateMessage
-extern  DispatchMessageA
-extern  DWriteCreateFactory
-extern  GetUserDefaultLocaleName
-extern  __mingw_swprintf
+; MSVCRT
+    extern  printf
+    extern  __mingw_swprintf
+; Win32
+    extern  GetModuleHandleA
+    extern  LoadIconA
+    extern  LoadCursorA
+    extern  RegisterClassA
+    extern  DefWindowProcA
+    extern  GetLastError
+    extern  CreateWindowExA
+    extern  ShowWindow
+    extern  GetClientRect
+    extern  ValidateRect
+    extern  PostQuitMessage
+    extern  PeekMessageA
+    extern  TranslateMessage
+    extern  DispatchMessageA
+; Direct2D
+    extern  D2D1CreateFactory
+; DirectWrite
+    extern  DWriteCreateFactory
+    extern  GetUserDefaultLocaleName
 ; Winsocks
     extern  WSAStartup
     extern  getaddrinfo
