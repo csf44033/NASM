@@ -1,11 +1,6 @@
 default rel
 global  main
-
-extern  printf, GetModuleHandleA, LoadIconA, LoadCursorA
-extern  RegisterClassA, DefWindowProcA, GetLastError, CreateWindowExA
-extern  ShowWindow, D2D1CreateFactory, GetClientRect, ValidateRect
-extern  PostQuitMessage, PeekMessageA, TranslateMessage, DispatchMessageA
-extern  DWriteCreateFactory, GetUserDefaultLocaleName, __mingw_swprintf
+%include    "externals.asm"
 
 %define PM_REMOVE 1h
 ; define data
@@ -47,6 +42,8 @@ segment .data
     format0:            db "%",0,"s",0," ",0,"%",0,"d",0,0,0
     score:              dd 0
     mscore:             db "Score",0
+    ErrorAbort:         db "Program Aborted: 0x%x", 0
+    DEFAULT_PORT:       db "http", 0
 ;dwrite values
     dwrite_factory_type_shared:     dq 0
     dwrite_factory_type_isolated:   dq 1
@@ -98,6 +95,38 @@ segment .data
 section .text
 main:
     sub     rsp, 104             ; home space
+; WSA Startup
+    mov     cx, [SocketVersion]
+    mov     rdx, WSADATA
+    call    WSAStartup
+    cmp     rax, 0
+    jnz     abort
+; call getaddrinfo
+    xor     rcx, rcx
+    mov     rdx, DEFAULT_PORT
+    mov     r8, SocketHints
+    mov     r9, SocketResult
+    call    getaddrinfo
+    cmp     rax, 0
+    jnz     abort
+; call socket
+    mov     rbx, [SocketResult]
+    mov     ecx, [rbx + addrinfo.ai_family]
+    mov     edx, [rbx + addrinfo.ai_socktype]
+    mov     r8d, [rbx + addrinfo.ai_protocol]
+    call    socket
+    cmp     eax, 0xFFFFFFFF
+    je     abort
+; bind socket
+    mov     rcx, rax
+    mov     rdx, [rbx + addrinfo.ai_addr]
+    mov     r8, [rbx + addrinfo.ai_addrlen]
+    call    bind
+    cmp     rax, 0
+    jnz     abort
+; free SocketResult
+    mov     rcx, rbx
+    call    freeaddrinfo
 
 ; Register class
     xor     rcx, rcx                        ; [in, optional]    lpModuleName
@@ -431,6 +460,10 @@ c6:
     call    qword [rbx + 0x188]
     
     jmp myloop
+abort:
+    mov     rcx, ErrorAbort
+    mov     rdx, rax
+    call    printf
     add     rsp, 104             ; clear stack
     ret
 wndproc:
