@@ -16,14 +16,18 @@
     extern  PeekMessageA
     extern  TranslateMessage
     extern  DispatchMessageA
+    extern  GetUserDefaultLocaleName
+    extern  MessageBoxA
 ; Direct2D
     extern  D2D1CreateFactory
 ; DirectWrite
     extern  DWriteCreateFactory
-    extern  GetUserDefaultLocaleName
 ; Winsocks
     extern  WSAStartup
     extern  getaddrinfo
     extern  socket
     extern  bind
-    extern freeaddrinfo
+    extern  freeaddrinfo
+    extern  WSACleanup
+    extern  WSAGetLastError
+    extern  closesocket

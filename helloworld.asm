@@ -12,6 +12,7 @@ segment .data
     %include    "riid.asm"
     %include    "structuredefs.asm"
     %include    "structures.asm"
+    %include    "variables.asm"
     classStyle		equ cs_vredraw|cs_hredraw|cs_dblclks|cs_owndc|cs_parentdc
     main_style		equ WS_VISIBLE|WS_TILEDWINDOW|WS_POPUP|WS_BORDER
     IDI_APPLICATION equ 32512
@@ -43,7 +44,6 @@ segment .data
     score:              dd 0
     mscore:             db "Score",0
     ErrorAbort:         db "Program Aborted: 0x%x", 0
-    DEFAULT_PORT:       db "http", 0
 ;dwrite values
     dwrite_factory_type_shared:     dq 0
     dwrite_factory_type_isolated:   dq 1
@@ -94,40 +94,72 @@ segment .data
 ; main code
 section .text
 main:
-    sub     rsp, 104             ; home space
+; home space
+    sub     rsp, 104
 ; WSA Startup
     mov     cx, [SocketVersion]
     mov     rdx, WSADATA
     call    WSAStartup
     cmp     rax, 0
     jnz     abort
-; call getaddrinfo
+; start box
+    xor     rcx, rcx
+    mov     rdx, StartBoxText
+    mov     r8, StartBoxCaption
+    mov     r9d, [StartBoxType]
+    call    MessageBoxA
+    cmp     eax, 7
+    je      ServerHost
+; Server Client
+;   ignore client right now because no way to input server
+    jmp     OpenWindow
+ServerHost:
+; Set Server Hints
+    mov     eax, [AF_INET]
+    mov     dword [SocketHints + addrinfo.ai_family], eax
+    mov     eax, [SOCK_DGRAM]
+    mov     dword [SocketHints + addrinfo.ai_socktype], eax
+    mov     eax, [IPPROTO_UDP]
+    mov     dword [SocketHints + addrinfo.ai_protocol], eax
+    mov     eax, [AI_PASSIVE]
+    mov     dword [SocketHints + addrinfo.ai_flags], eax
+; Get Addrinfo
     xor     rcx, rcx
     mov     rdx, DEFAULT_PORT
     mov     r8, SocketHints
-    mov     r9, SocketResult
+    mov     r9, pResult
     call    getaddrinfo
     cmp     rax, 0
-    jnz     abort
-; call socket
-    mov     rbx, [SocketResult]
+    jnz     ClearWSA
+; Create socket
+    mov     rbx, [pResult]
     mov     ecx, [rbx + addrinfo.ai_family]
     mov     edx, [rbx + addrinfo.ai_socktype]
     mov     r8d, [rbx + addrinfo.ai_protocol]
     call    socket
-    cmp     eax, 0xFFFFFFFF
-    je     abort
-; bind socket
+    cmp     eax, 0xffffffff
+    je      FreeADDR
+; bind socket and adder
+    mov     [ListenSocket], rax
     mov     rcx, rax
     mov     rdx, [rbx + addrinfo.ai_addr]
-    mov     r8, [rbx + addrinfo.ai_addrlen]
+    mov     r8d, [rbx + addrinfo.ai_addrlen]
     call    bind
     cmp     rax, 0
-    jnz     abort
-; free SocketResult
-    mov     rcx, rbx
+    jnz     SocketClose
+    jmp     OpenWindow
+SocketClose:
+    mov     rcx, [ListenSocket]
+    call    closesocket
+FreeADDR:
+    mov     rcx, [pResult]
     call    freeaddrinfo
-
+ClearWSA:
+    call    WSAGetLastError
+    mov     rdx, rax
+    call    WSACleanup
+    jmp     abort
+OpenWindow:
 ; Register class
     xor     rcx, rcx                        ; [in, optional]    lpModuleName
     call    GetModuleHandleA                ; call
