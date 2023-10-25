@@ -31,3 +31,4 @@
     extern  WSACleanup
     extern  WSAGetLastError
     extern  closesocket
+    extern  WSAAsyncSelect

@@ -1,0 +1,11 @@
+FD_READ                     equ 0x001
+FD_WRITE                    equ 0x002
+FD_OOB                      equ 0x004
+FD_ACCEPT                   equ 0x008
+FD_CONNECT                  equ 0x010
+FD_CLOSE                    equ 0x020
+FD_QOS                      equ 0x040
+FD_GROUP_QOS                equ 0x080
+FD_ROUTING_INTERFACE_CHANGE equ 0x100
+FD_ADDRESS_LIST_CHANGE      equ 0x200
+FD_ALL_EVENTS               equ 0x400

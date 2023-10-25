@@ -205,6 +205,7 @@ wm_wininichange			equ 0000001Ah
 wm_xbuttondblclk		equ 0000020Dh
 wm_xbuttondown			equ 0000020Bh
 wm_xbuttonup			equ 0000020Ch
+WM_SOCKET               equ 0xFFFF
 
 WS_BORDER			EQU 00800000h
 WS_CAPTION			EQU 00C00000h
